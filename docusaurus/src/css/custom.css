@@ -494,6 +494,11 @@
   color: var(--robotics-navy);
 }
 
+/* Ensure h1 headings are visible in dark mode */
+[data-theme='dark'] .markdown h1 {
+  color: var(--ifm-heading-color);
+}
+
 .markdown h2 {
   font-size: 2rem;
   color: var(--robotics-dark-blue);
