@@ -1,0 +1,351 @@
+# ROS 2 Interface Contracts for Physical AI & Humanoid Robotics
+
+openapi: 3.0.0
+info:
+  title: ROS 2 Interface Contracts for Humanoid Robotics
+  description: API contracts for ROS 2 interfaces used in the Physical AI & Humanoid Robotics book
+  version: 1.0.0
+
+paths:
+  /navigation/goal:
+    post:
+      summary: Send navigation goal to the robot
+      description: Initiates navigation to a specified pose using Nav2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pose:
+                  type: object
+                  properties:
+                    position:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          format: float64
+                        y:
+                          type: number
+                          format: float64
+                        z:
+                          type: number
+                          format: float64
+                    orientation:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          format: float64
+                        y:
+                          type: number
+                          format: float64
+                        z:
+                          type: number
+                          format: float64
+                        w:
+                          type: number
+                          format: float64
+                  required:
+                    - position
+                    - orientation
+                behavior_tree:
+                  type: string
+                  description: Custom behavior tree to use for navigation
+              required:
+                - pose
+      responses:
+        '200':
+          description: Navigation goal accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  goal_id:
+                    type: string
+                    description: Unique identifier for the navigation goal
+                  status:
+                    type: string
+                    enum: [accepted, rejected, executing]
+        '400':
+          description: Invalid pose or request parameters
+        '500':
+          description: Navigation system error
+
+  /voice/command:
+    post:
+      summary: Send voice command to the robot
+      description: Processes voice command through ASR and LLM for execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                audio_data:
+                  type: string
+                  format: byte
+                  description: Base64 encoded audio data
+                text_command:
+                  type: string
+                  description: Optional pre-processed text command
+                language:
+                  type: string
+                  default: "en-US"
+                  description: Language code for ASR processing
+              required:
+                - audio_data
+      responses:
+        '200':
+          description: Command processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  intent:
+                    type: string
+                    description: Recognized intent from the voice command
+                  action_plan:
+                    type: array
+                    items:
+                      type: string
+                    description: Planned actions to execute
+                  confidence:
+                    type: number
+                    format: float
+                    minimum: 0.0
+                    maximum: 1.0
+                    description: Confidence in intent recognition
+        '400':
+          description: Invalid audio data or command
+        '500':
+          description: Voice processing system error
+
+  /manipulation/grasp:
+    post:
+      summary: Execute grasp action
+      description: Plans and executes grasp action for object manipulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                object_id:
+                  type: string
+                  description: Unique identifier of the target object
+                object_pose:
+                  type: object
+                  properties:
+                    position:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          format: float64
+                        y:
+                          type: number
+                          format: float64
+                        z:
+                          type: number
+                          format: float64
+                    orientation:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          format: float64
+                        y:
+                          type: number
+                          format: float64
+                        z:
+                          type: number
+                          format: float64
+                        w:
+                          type: number
+                          format: float64
+                  required:
+                    - position
+                    - orientation
+                grasp_type:
+                  type: string
+                  enum: [pinch, power, spherical, custom]
+                  description: Type of grasp to use
+                gripper_width:
+                  type: number
+                  format: float
+                  description: Desired gripper width in meters
+              required:
+                - object_id
+                - object_pose
+      responses:
+        '200':
+          description: Grasp action completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the grasp was successful
+                  grasp_quality:
+                    type: number
+                    format: float
+                    minimum: 0.0
+                    maximum: 1.0
+                    description: Quality metric for the grasp
+                  execution_time:
+                    type: number
+                    format: float
+                    description: Time taken to execute the grasp in seconds
+        '400':
+          description: Invalid object pose or grasp parameters
+        '500':
+          description: Manipulation system error
+
+  /perception/detect_objects:
+    get:
+      summary: Detect objects in the environment
+      description: Performs object detection and returns detected objects
+      parameters:
+        - name: camera_topic
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "/camera/rgb/image_raw"
+            description: Topic to get camera image from
+        - name: detection_threshold
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.5
+            description: Minimum confidence threshold for detections
+      responses:
+        '200':
+          description: Object detection completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  objects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique object identifier
+                        class:
+                          type: string
+                          description: Object class label
+                        confidence:
+                          type: number
+                          format: float
+                          minimum: 0.0
+                          maximum: 1.0
+                          description: Detection confidence
+                        bbox:
+                          type: object
+                          properties:
+                            x_min:
+                              type: number
+                              format: float
+                            y_min:
+                              type: number
+                              format: float
+                            x_max:
+                              type: number
+                              format: float
+                            y_max:
+                              type: number
+                              format: float
+                        pose:
+                          type: object
+                          properties:
+                            position:
+                              type: object
+                              properties:
+                                x:
+                                  type: number
+                                  format: float64
+                                y:
+                                  type: number
+                                  format: float64
+                                z:
+                                  type: number
+                                  format: float64
+                            orientation:
+                              type: object
+                              properties:
+                                x:
+                                  type: number
+                                  format: float64
+                                y:
+                                  type: number
+                                  format: float64
+                                z:
+                                  type: number
+                                  format: float64
+                                w:
+                                  type: number
+                                  format: float64
+                      required:
+                        - id
+                        - class
+                        - confidence
+                        - bbox
+                  execution_time:
+                    type: number
+                    format: float
+                    description: Time taken for object detection in seconds
+        '500':
+          description: Perception system error
+
+components:
+  schemas:
+    Pose:
+      type: object
+      properties:
+        position:
+          type: object
+          properties:
+            x:
+              type: number
+              format: float64
+            y:
+              type: number
+              format: float64
+            z:
+              type: number
+              format: float64
+        orientation:
+          type: object
+          properties:
+            x:
+              type: number
+              format: float64
+            y:
+              type: number
+              format: float64
+            z:
+              type: number
+              format: float64
+            w:
+              type: number
+              format: float64
+      required:
+        - position
+        - orientation

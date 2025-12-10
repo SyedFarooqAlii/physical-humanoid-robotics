@@ -1,0 +1,49 @@
+ai:
+  label: AI
+  permalink: /ai
+  description: Artificial Intelligence related content
+
+robotics:
+  label: Robotics
+  permalink: /robotics
+  description: Robotics and automation content
+
+web3:
+  label: Web3
+  permalink: /web3
+  description: Web3 and blockchain technology content
+
+education:
+  label: Education
+  permalink: /education
+  description: Educational content and tutorials
+
+learning:
+  label: Learning
+  permalink: /learning
+  description: Learning and development content
+
+mdx:
+  label: MDX
+  permalink: /mdx
+  description: MDX and interactive content
+
+docusaurus:
+  label: Docusaurus
+  permalink: /docusaurus
+  description: Docusaurus documentation and features
+
+facebook:
+  label: Facebook
+  permalink: /facebook
+  description: Facebook related content
+
+hello:
+  label: Hello
+  permalink: /hello
+  description: Hello tag description
+
+hola:
+  label: Hola
+  permalink: /hola
+  description: Hola tag description

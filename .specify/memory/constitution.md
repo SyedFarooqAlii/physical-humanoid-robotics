@@ -1,55 +1,47 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+Version change: 0.0.0 → 1.0.0 (Initial version based on project specification)
+List of modified principles:
+- Added "Accuracy through Direct Verification" principle
+- Added "AI-Native Development with Human-in-the-Loop" principle
+- Added "Reproducibility and Transparency" principle
+- Added "No Plagiarism or Hallucination" principle
+- Added "Modular and Accessible Content" principle
+- Added "Continuous Improvement" principle
+Added sections: Technical Constraints, Development Workflow, Governance
+Removed sections: None
+Templates requiring updates: None (templates are generic and don't reference specific principles)
+Follow-up TODOs: None
+-->
+# AI/Spec-Driven Unified Book Creation using Spec-Kit Plus and Claude Code Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Accuracy through Direct Verification
+All factual and technical claims must be verifiable through credible sources. Minimum 60% sources from official documentation, research papers, or authoritative technical platforms. All explanations must be beginner-friendly while remaining technically correct.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### AI-Native Development with Human-in-the-Loop
+AI is used as a co-author, not a replacement for human judgment. AI-generated content must be reviewed, edited, and validated by humans. All misleading, biased, or unverifiable content must be removed.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Reproducibility and Transparency
+Reproducibility of content, structure, and workflow. Transparency of sources, tools, and generation process. All content must be written in Markdown. Version control must be maintained via GitHub.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### No Plagiarism or Hallucination
+Plagiarism tolerance: 0%. No hallucinated concepts, tools, or references are allowed. All reused ideas must be rewritten originally with proper attribution. Safety, privacy, and responsible AI principles must be respected at all stages.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Modular and Accessible Content
+Clarity and accessibility for a technical audience (students, developers, and AI engineers). Chapters must be modular and independently readable. Each chapter must include concept explanation, practical example, use case or real-world application, and summary.
 
-### [PRINCIPLE_6_NAME]
+### Continuous Improvement
+Continuous improvement through iterative refinement. All chapters pass human factual verification. Code examples must be runnable, minimal, and clearly explained.
 
+## Technical Constraints
+Platform: Docusaurus, Deployment: GitHub Pages, Tooling: Spec-Kit Plus for specification-driven structure and Claude Code for AI-assisted content generation. All content must be written in Markdown. The book must build successfully with zero build errors.
 
-[PRINCIPLE__DESCRIPTION]
-
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow
+Follow Spec-Kit Plus processes for specification-driven development. Use Claude Code for AI-assisted content generation. All chapters must follow a consistent documentation structure defined by Spec-Kit Plus. Each chapter must include concept explanation, practical example, use case or real-world application, and summary.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+This constitution supersedes all other practices. Amendments require documentation, approval, and migration plan if needed. All development must verify compliance with these principles. Complexity must be justified. Use CLAUDE.md for runtime development guidance.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-12-10 | **Last Amended**: 2025-12-10
