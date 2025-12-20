@@ -72,13 +72,17 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      disableSwitch: false,
+      respectPrefersColorScheme: false,
     },
     navbar: {
-      title: 'Physical AI & Robotics',
+      title: 'Physical AI & Humanoid Robotics',
       logo: {
         alt: 'Physical AI & Humanoid Robotics Logo',
-        src: 'img/logo.svg', // Using default Docusaurus logo
+        src: 'img/robot-face-icon.svg', // Robot face icon
+        width: 32,
+        height: 32,
       },
       items: [
         {
@@ -88,6 +92,15 @@ const config: Config = {
           label: 'Curriculum',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          type: 'localeDropdown',
+          position: 'right',
+        },
+        {
+          type: 'theme',
+          position: 'right',
+          label: 'Toggle theme',
+        },
         {
           href: 'https://github.com/SyedFarooqAlii',
           label: 'GitHub',
@@ -155,12 +168,15 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Physical AI & Humanoid Robotics Curriculum by Syed Farooq Ali. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Physical AI & Humanoid Robotics Curriculum by Syed Farooq Ali.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
+    clientModules: [
+      './src/components/ChatbotWidget/index.tsx',
+    ],
   } satisfies Preset.ThemeConfig,
 };
 

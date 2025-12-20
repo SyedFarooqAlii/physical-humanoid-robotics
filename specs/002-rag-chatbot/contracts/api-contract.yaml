@@ -1,0 +1,222 @@
+# API Contract: RAG Chatbot for Physical AI Book
+
+## Overview
+This document defines the API contracts for the RAG Chatbot service that enables question-answering capabilities for the Physical AI & Humanoid Robotics book.
+
+## Base URL
+`https://api.rag-chatbot.example.com` (to be determined by deployment)
+
+## Authentication
+All API endpoints require an API key in the `Authorization` header:
+```
+Authorization: Bearer {API_KEY}
+```
+
+## Endpoints
+
+### POST /api/chat
+Process a user message and return a response with citations.
+
+#### Request
+```json
+{
+  "session_id": "string",
+  "message": "string",
+  "selected_text": "string (optional)",
+  "query_type": "string (global|selection, default: global)"
+}
+```
+
+#### Response (Success - 200)
+```json
+{
+  "response": "string",
+  "citations": [
+    {
+      "document_id": "string",
+      "title": "string",
+      "chapter": "string",
+      "section": "string",
+      "page_reference": "string"
+    }
+  ],
+  "session_id": "string",
+  "query_type": "string"
+}
+```
+
+#### Response (Error - 400)
+```json
+{
+  "error": "string",
+  "details": "string"
+}
+```
+
+#### Response (Rate Limit - 429)
+```json
+{
+  "error": "Rate limit exceeded",
+  "retry_after": "integer (seconds)"
+}
+```
+
+### POST /api/query
+Direct query endpoint for RAG operations without chat session management.
+
+#### Request
+```json
+{
+  "query": "string",
+  "selected_text": "string (optional)",
+  "top_k": "integer (default: 5, max: 10)",
+  "query_type": "string (global|selection, default: global)"
+}
+```
+
+#### Response (Success - 200)
+```json
+{
+  "query": "string",
+  "results": [
+    {
+      "document_id": "string",
+      "content": "string",
+      "title": "string",
+      "chapter": "string",
+      "section": "string",
+      "page_reference": "string",
+      "score": "float"
+    }
+  ]
+}
+```
+
+### POST /api/index
+Index book content for RAG operations. This endpoint is typically used internally during content updates.
+
+#### Request
+```json
+{
+  "content": "string",
+  "title": "string",
+  "chapter": "string",
+  "section": "string",
+  "page_reference": "string"
+}
+```
+
+#### Response (Success - 200)
+```json
+{
+  "document_id": "string",
+  "status": "indexed",
+  "message": "Document successfully indexed"
+}
+```
+
+### GET /api/session/{session_id}
+Retrieve the chat history for a specific session.
+
+#### Response (Success - 200)
+```json
+{
+  "session_id": "string",
+  "messages": [
+    {
+      "message_id": "string",
+      "role": "string (user|assistant)",
+      "content": "string",
+      "timestamp": "string (ISO 8601)",
+      "citations": "array"
+    }
+  ]
+}
+```
+
+### DELETE /api/session/{session_id}
+Delete a chat session and all associated messages.
+
+#### Response (Success - 200)
+```json
+{
+  "status": "deleted",
+  "session_id": "string"
+}
+```
+
+## Error Responses
+
+All error responses follow the same structure:
+
+```json
+{
+  "error": "string",
+  "details": "string (optional)",
+  "error_code": "string"
+}
+```
+
+### Common Error Codes
+- `INVALID_INPUT`: Request body validation failed
+- `RATE_LIMIT_EXCEEDED`: Request rate limit exceeded
+- `RESOURCE_NOT_FOUND`: Requested resource does not exist
+- `INTERNAL_ERROR`: Internal server error occurred
+- `VECTOR_DB_ERROR`: Error occurred during vector database operation
+- `AI_SERVICE_ERROR`: Error occurred during AI service call
+
+## Rate Limits
+- Chat endpoint: 100 requests per minute per API key
+- Query endpoint: 200 requests per minute per API key
+- Index endpoint: 10 requests per minute per API key
+
+## Request/Response Examples
+
+### Example Chat Request
+```
+POST /api/chat
+Content-Type: application/json
+
+{
+  "session_id": "sess_abc123",
+  "message": "What are the main challenges in humanoid robotics?",
+  "query_type": "global"
+}
+```
+
+### Example Chat Response
+```
+{
+  "response": "The main challenges in humanoid robotics include: 1) Balance and locomotion control, 2) Complex motor coordination, 3) Environmental perception and mapping, 4) Human-robot interaction, and 5) Energy efficiency. These challenges require interdisciplinary approaches combining mechanical engineering, control theory, and AI.",
+  "citations": [
+    {
+      "document_id": "doc_123",
+      "title": "Introduction to Humanoid Robotics",
+      "chapter": "Chapter 1",
+      "section": "1.2 Challenges in Humanoid Design",
+      "page_reference": "p. 15-18"
+    }
+  ],
+  "session_id": "sess_abc123",
+  "query_type": "global"
+}
+```
+
+### Example Selection-Based Query Request
+```
+POST /api/chat
+Content-Type: application/json
+
+{
+  "session_id": "sess_abc123",
+  "message": "Explain the control algorithms mentioned here?",
+  "selected_text": "The control algorithms used in this humanoid robot include PID controllers for joint position control and model predictive control for dynamic balance maintenance.",
+  "query_type": "selection"
+}
+```
+
+## Security Considerations
+- All API keys must be transmitted over HTTPS
+- API keys should be stored securely and never exposed in client-side code
+- Input validation is performed on all text fields to prevent injection attacks
+- Rate limiting is enforced to prevent abuse

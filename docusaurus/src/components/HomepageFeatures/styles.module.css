@@ -1,11 +1,124 @@
 .features {
   display: flex;
   align-items: center;
-  padding: 2rem 0;
+  padding: 4rem 2rem;
   width: 100%;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f1f5f9;
 }
 
 .featureSvg {
   height: 200px;
   width: 200px;
+}
+
+/* Enhanced feature card styling to match the index page */
+.padding-horiz--md {
+  background: var(--ifm-background-surface-color);
+  border-radius: 16px;
+  padding: 2.5rem 1.5rem;
+  margin: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.padding-horiz--md::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0ea5e9, #22d3ee);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.padding-horiz--md:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.padding-horiz--md:hover::before {
+  transform: scaleX(1);
+}
+
+.padding-horiz--md h3 {
+  color: #0ea5e9;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #f1f5f9, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.padding-horiz--md p {
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/* Mobile responsiveness for feature cards */
+@media (max-width: 996px) {
+  .features {
+    padding: 3rem 1rem;
+  }
+
+  .padding-horiz--md {
+    padding: 2rem 1.25rem;
+    margin: 0.75rem;
+  }
+
+  .padding-horiz--md h3 {
+    font-size: 1.3rem;
+  }
+
+  .padding-horiz--md p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .features {
+    padding: 2.5rem 1rem;
+  }
+
+  .padding-horiz--md {
+    padding: 1.75rem 1rem;
+    margin: 0.5rem;
+  }
+
+  .padding-horiz--md h3 {
+    font-size: 1.25rem;
+  }
+
+  .padding-horiz--md p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .features {
+    padding: 2rem 0.5rem;
+  }
+
+  .padding-horiz--md {
+    padding: 1.5rem 0.75rem;
+    margin: 0.25rem;
+  }
+
+  .padding-horiz--md h3 {
+    font-size: 1.15rem;
+  }
+
+  .padding-horiz--md p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
 }
