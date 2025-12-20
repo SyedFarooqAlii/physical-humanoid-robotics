@@ -97,9 +97,8 @@ const config: Config = {
           position: 'right',
         },
         {
-          type: 'theme',
+          type: 'themeToggle',
           position: 'right',
-          label: 'Toggle theme',
         },
         {
           href: 'https://github.com/SyedFarooqAlii',
