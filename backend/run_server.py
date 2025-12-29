@@ -15,13 +15,13 @@ def run_server():
     print("Qdrant vector database connected")
     print("Neon PostgreSQL database connected")
     print("Google Gemini API configured")
-    print("\nServer will be available at: http://localhost:8000")
-    print("API documentation at: http://localhost:8000/docs")
+    print("\nServer will be available at: http://localhost:8081")
+    print("API documentation at: http://localhost:8081/docs")
 
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8081,
         reload=True,  # Set to False in production
         log_level="info"
     )

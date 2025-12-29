@@ -55,7 +55,7 @@ const ChatbotWidget = () => {
 
     try {
       // Call backend API
-      const response = await fetch('http://localhost:8000/api', {
+      const response = await fetch('http://localhost:8081/api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import asyncio
 import json
 from typing import List, Dict, Any, Optional
-from app.services.gemini_client import gemini_client
+from app.services.openrouter_client import openrouter_client
 from app.prompting.prompt_builder import PromptBuilder
 from app.retrieval.retriever import Retriever
 from app.config import settings
@@ -13,7 +13,7 @@ class ResponseGenerator:
     """
 
     def __init__(self):
-        self.gemini_client = gemini_client
+        self.openrouter_client = openrouter_client
         self.prompt_builder = PromptBuilder()
         self.retriever = Retriever()
 
@@ -38,15 +38,27 @@ class ResponseGenerator:
 
             context_string = "\n\n".join(context_parts)
 
-            # Generate response using Gemini
-            gemini_response = await self.gemini_client.generate_response(
-                query=query,
-                context=context_string,
-                query_type=query_type,
-                selected_text=selected_text
+            # Prepare messages for OpenRouter
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an expert assistant for the Physical AI & Humanoid Robotics curriculum. Provide helpful, conversational responses based on the provided context. Always use information only from the provided context and be factual."
+                },
+                {
+                    "role": "user",
+                    "content": f"Context: {context_string}\n\nQuestion: {query}\n\nProvide a helpful response based on the context:"
+                }
+            ]
+
+            # Generate response using OpenRouter
+            openrouter_response = await self.openrouter_client.generate_completion(
+                messages=messages,
+                model="mistralai/devstral-2512:free",
+                temperature=0.3,
+                max_tokens=1000
             )
 
-            if not gemini_response.text:
+            if not openrouter_response:
                 return {
                     "response": "I encountered an issue generating a response. Please try again.",
                     "citations": [],
@@ -58,14 +70,14 @@ class ResponseGenerator:
             citations = self._extract_citations(retrieved_contexts)
 
             return {
-                "response": gemini_response.text,
+                "response": openrouter_response,
                 "citations": citations,
                 "query_type": query_type,
                 "session_id": session_id
             }
 
         except Exception as e:
-            print(f"Error generating response: {str(e)}")
+            print(f"[ERROR] Error generating response: {str(e)}")
             # If AI service fails, try to provide a helpful response based on the context
             if retrieved_contexts:
                 # Extract key information from contexts to provide a basic response
@@ -74,10 +86,13 @@ class ResponseGenerator:
 
                 if unique_titles:
                     response = f"Based on the Physical AI & Humanoid Robotics curriculum, I found information related to: {', '.join(unique_titles[:3])}. "
-                    response += "The specific answer to your question may be available in these sections of the book. "
-                    response += "Feel free to ask more specific questions about these topics!"
+                    response += "Here's what I can share from the book content: "
+                    # Include some of the actual content from the contexts
+                    first_context = retrieved_contexts[0]
+                    content_preview = first_context.get('content', '')[:200]
+                    response += content_preview + ("..." if len(first_context.get('content', '')) > 200 else "")
                 else:
-                    response = "I found some relevant content in the Physical AI & Humanoid Robotics curriculum. "
+                    response = "Based on the Physical AI & Humanoid Robotics curriculum, I found relevant content. "
                     response += "Could you ask a more specific question about the topic you're interested in?"
             else:
                 response = "I couldn't find relevant information in the Physical AI & Humanoid Robotics curriculum to answer your question. "
@@ -141,7 +156,7 @@ class ResponseGenerator:
 
             return result
         except Exception as e:
-            print(f"Error in generate_response_with_validation: {str(e)}")
+            print(f"[ERROR] Error in generate_response_with_validation: {str(e)}")
             # If AI service fails, try to provide a helpful response based on the context
             if retrieved_contexts:
                 # Extract key information from contexts to provide a basic response
@@ -150,10 +165,13 @@ class ResponseGenerator:
 
                 if unique_titles:
                     response = f"Based on the Physical AI & Humanoid Robotics curriculum, I found information related to: {', '.join(unique_titles[:3])}. "
-                    response += "The specific answer to your question may be available in these sections of the book. "
-                    response += "Feel free to ask more specific questions about these topics!"
+                    response += "Here's what I can share from the book content: "
+                    # Include some of the actual content from the contexts
+                    first_context = retrieved_contexts[0]
+                    content_preview = first_context.get('content', '')[:200]
+                    response += content_preview + ("..." if len(first_context.get('content', '')) > 200 else "")
                 else:
-                    response = "I found some relevant content in the Physical AI & Humanoid Robotics curriculum. "
+                    response = "Based on the Physical AI & Humanoid Robotics curriculum, I found relevant content. "
                     response += "Could you ask a more specific question about the topic you're interested in?"
             else:
                 response = "I couldn't find relevant information in the Physical AI & Humanoid Robotics curriculum to answer your question. "
@@ -195,15 +213,27 @@ class ResponseGenerator:
             "If the context does not contain the answer, explicitly state this fact."
         )
 
-        # Generate response using Gemini
-        gemini_response = await self.gemini_client.generate_response(
-            query=query,
-            context=stronger_context,
-            query_type=query_type,
-            selected_text=selected_text
+        # Prepare messages for OpenRouter
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an expert assistant for the Physical AI & Humanoid Robotics curriculum. Provide helpful, conversational responses based on the provided context. Always use information only from the provided context and be factual."
+            },
+            {
+                "role": "user",
+                "content": f"Context: {stronger_context}\n\nQuestion: {query}\n\nProvide a helpful response based on the context:"
+            }
+        ]
+
+        # Generate response using OpenRouter
+        openrouter_response = await self.openrouter_client.generate_completion(
+            messages=messages,
+            model="mistralai/devstral-2512:free",
+            temperature=0.3,
+            max_tokens=1000
         )
 
-        if not gemini_response.text:
+        if not openrouter_response:
             return {
                 "response": "I encountered an issue generating a response. Please try again.",
                 "citations": [],
@@ -214,7 +244,7 @@ class ResponseGenerator:
         citations = self._extract_citations(retrieved_contexts)
 
         return {
-            "response": gemini_response.text,
+            "response": openrouter_response,
             "citations": citations,
             "query_type": query_type,
             "session_id": session_id
@@ -315,15 +345,27 @@ class ResponseGenerator:
             "[Source 1], [Source 2], etc., corresponding to the order they appear in the context section."
         )
 
-        # Generate response using Gemini
-        gemini_response = await self.gemini_client.generate_response(
-            query=query,
-            context=citation_context,
-            query_type=query_type,
-            selected_text=selected_text
+        # Prepare messages for OpenRouter
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an expert assistant for the Physical AI & Humanoid Robotics curriculum. Provide helpful, conversational responses based on the provided context. Always use information only from the provided context and be factual. When answering, please indicate which sources you used by referencing them as [Source 1], [Source 2], etc., corresponding to the order they appear in the context section."
+            },
+            {
+                "role": "user",
+                "content": f"Context: {citation_context}\n\nQuestion: {query}\n\nProvide a helpful response based on the context:"
+            }
+        ]
+
+        # Generate response using OpenRouter
+        openrouter_response = await self.openrouter_client.generate_completion(
+            messages=messages,
+            model="mistralai/devstral-2512:free",
+            temperature=0.3,
+            max_tokens=1000
         )
 
-        if not gemini_response.text:
+        if not openrouter_response:
             return {
                 "response": "I encountered an issue generating a response. Please try again.",
                 "citations": [],
@@ -334,7 +376,7 @@ class ResponseGenerator:
         citations = self._extract_citations(retrieved_contexts)
 
         return {
-            "response": gemini_response.text,
+            "response": openrouter_response,
             "citations": citations,
             "query_type": query_type,
             "session_id": session_id

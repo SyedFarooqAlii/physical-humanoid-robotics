@@ -11,24 +11,35 @@ class QdrantVectorStore:
     """
 
     def __init__(self):
-        self.client = QdrantClient(
-            url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY,
-            prefer_grpc=False,  # Using HTTP for better compatibility
-            timeout=60.0  # Increase timeout for large batch operations
-        )
-        self.collection_name = "book_content_chunks"
-        self.vector_size = 1536  # Standard embedding size for text-embedding-ada-002
-        self._initialize_collection()
+        try:
+            self.client = QdrantClient(
+                url=settings.QDRANT_URL,
+                api_key=settings.QDRANT_API_KEY,
+                prefer_grpc=False,  # Using HTTP for better compatibility
+                timeout=60.0  # Increase timeout for large batch operations
+            )
+            self.collection_name = "book_content_chunks"
+            self.vector_size = 1536  # Standard embedding size for text-embedding-ada-002
+            self._initialize_collection()
+        except Exception as e:
+            print(f"[WARN] Could not connect to Qdrant: {e}")
+            print("[WARN] Qdrant functionality will be unavailable until connection is restored")
+            # Initialize with None values when connection fails
+            self.client = None
+            self.collection_name = "book_content_chunks"
+            self.vector_size = 1536
 
     def _initialize_collection(self):
         """
         Initialize the collection if it doesn't exist
         """
+        if self.client is None:
+            return  # Skip initialization if no client
+
         try:
             # Check if collection exists
             self.client.get_collection(self.collection_name)
-            print(f"Collection '{self.collection_name}' already exists")
+            print(f"[INFO] Collection '{self.collection_name}' already exists")
         except:
             # Create collection if it doesn't exist
             self.client.create_collection(
@@ -38,7 +49,7 @@ class QdrantVectorStore:
                     distance=models.Distance.COSINE
                 )
             )
-            print(f"Created collection '{self.collection_name}'")
+            print(f"[INFO] Created collection '{self.collection_name}'")
 
             # Create payload index for faster filtering
             self.client.create_payload_index(
@@ -57,6 +68,10 @@ class QdrantVectorStore:
         """
         Store chunks with their embeddings in Qdrant
         """
+        if self.client is None:
+            print("[WARN] Cannot store embeddings - Qdrant not connected")
+            return
+
         points = []
         for item in chunks_with_embeddings:
             point = models.PointStruct(
@@ -89,6 +104,10 @@ class QdrantVectorStore:
         """
         Search for similar content based on embedding similarity
         """
+        if self.client is None:
+            print("[WARN] Cannot search - Qdrant not connected")
+            return []
+
         # Build filters if needed
         filters = None
         if chapter_filter:
@@ -129,6 +148,10 @@ class QdrantVectorStore:
         """
         Retrieve a specific document by its ID
         """
+        if self.client is None:
+            print("[WARN] Cannot retrieve document - Qdrant not connected")
+            return None
+
         points = self.client.retrieve(
             collection_name=self.collection_name,
             ids=[doc_id],
@@ -152,15 +175,28 @@ class QdrantVectorStore:
         """
         Delete the entire collection (use with caution!)
         """
+        if self.client is None:
+            print("[WARN] Cannot delete collection - Qdrant not connected")
+            return
+
         self.client.delete_collection(self.collection_name)
 
     def get_collection_info(self) -> Dict[str, Any]:
         """
         Get information about the collection
         """
+        if self.client is None:
+            print("[WARN] Cannot get collection info - Qdrant not connected")
+            return {
+                'name': self.collection_name,
+                'vector_size': self.vector_size,
+                'distance': 'COSINE',
+                'point_count': 0
+            }
+
         info = self.client.get_collection(self.collection_name)
         return {
-            'name': info.config.params.vectors.size,
+            'name': self.collection_name,
             'vector_size': info.config.params.vectors.size,
             'distance': info.config.params.vectors.distance,
             'point_count': info.points_count

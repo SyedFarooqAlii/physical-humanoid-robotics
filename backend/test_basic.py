@@ -21,18 +21,18 @@ async def test_basic_functionality():
 
     # Test 1: Configuration loading
     print("\n1. Testing configuration...")
-    if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your_gemini_api_key_here":
-        print("✓ Configuration loaded successfully")
+    if settings.OPENROUTER_API_KEY and settings.OPENROUTER_API_KEY != "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":
+        print("V Configuration loaded successfully")
     else:
-        print("⚠ API key not configured (using placeholder)")
+        print("! API key not configured (using placeholder)")
 
     # Test 2: Qdrant connection
     print("\n2. Testing Qdrant connection...")
     try:
         info = qdrant_client.get_collection_info()
-        print(f"✓ Qdrant connection successful - Collection: {info['name']}, Points: {info['point_count']}")
+        print(f"[OK] Qdrant connection successful - Collection: {info['name']}, Points: {info['point_count']}")
     except Exception as e:
-        print(f"✗ Qdrant connection failed: {e}")
+        print(f"[ERROR] Qdrant connection failed: {e}")
         return False
 
     # Test 3: Embedding generation (basic check)
@@ -41,12 +41,12 @@ async def test_basic_functionality():
         test_text = "This is a test sentence for embedding generation."
         embedding = minimal_embedding_generator.encode_query(test_text)
         if embedding and len(embedding) > 0:
-            print(f"✓ Embedding generation works - Vector size: {len(embedding)}")
+            print(f"[OK] Embedding generation works - Vector size: {len(embedding)}")
         else:
-            print("✗ Embedding generation returned empty results")
+            print("[ERROR] Embedding generation returned empty results")
             return False
     except Exception as e:
-        print(f"✗ Embedding generation failed: {e}")
+        print(f"[ERROR] Embedding generation failed: {e}")
         return False
 
     # Test 4: Prompt building
@@ -71,27 +71,27 @@ async def test_basic_functionality():
         )
 
         if len(global_prompt) > 100 and len(selection_prompt) > 100:
-            print("✓ Prompt building works for both query types")
+            print("[OK] Prompt building works for both query types")
         else:
-            print("✗ Prompt building returned unexpectedly short prompts")
+            print("[ERROR] Prompt building returned unexpectedly short prompts")
             return False
     except Exception as e:
-        print(f"✗ Prompt building failed: {e}")
+        print(f"[ERROR] Prompt building failed: {e}")
         return False
 
     # Test 5: Response generation (without actually calling the API to save costs)
     print("\n5. Testing response generator setup...")
     try:
         if response_generator.openrouter_client:
-            print("✓ Response generator initialized successfully")
+            print("[OK] Response generator initialized successfully")
         else:
-            print("✗ Response generator not properly initialized")
+            print("[ERROR] Response generator not properly initialized")
             return False
     except Exception as e:
-        print(f"✗ Response generator test failed: {e}")
+        print(f"[ERROR] Response generator test failed: {e}")
         return False
 
-    print("\n✓ All basic functionality tests passed!")
+    print("\n[OK] All basic functionality tests passed!")
     print("\nBackend is ready for full RAG operations.")
     print("\nTo start the API server, run:")
     print("cd backend")

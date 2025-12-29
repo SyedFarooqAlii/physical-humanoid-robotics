@@ -59,7 +59,7 @@ async def health_check():
 
     # Check external services (API keys)
     try:
-        if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "your_gemini_api_key_here":
+        if not settings.OPENROUTER_API_KEY or settings.OPENROUTER_API_KEY == "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":
             health_status["checks"]["external_services"]["status"] = "warning"
             health_status["checks"]["external_services"]["message"] = "API key not configured or using default value"
         else:

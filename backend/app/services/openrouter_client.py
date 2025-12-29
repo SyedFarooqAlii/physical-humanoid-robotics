@@ -79,12 +79,12 @@ class OpenRouterClient:
     async def generate_completion(
         self,
         messages: List[Dict[str, str]],
-        model: str = "anthropic/claude-3-sonnet",
+        model: str = "mistralai/devstral-2512:free",
         temperature: float = 0.7,
         max_tokens: int = 1000
     ) -> Optional[str]:
         """
-        Generate completion using OpenRouter API with Claude model
+        Generate completion using OpenRouter API with specified model
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",

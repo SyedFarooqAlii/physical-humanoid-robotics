@@ -97,10 +97,6 @@ const config: Config = {
           position: 'right',
         },
         {
-          type: 'themeToggle',
-          position: 'right',
-        },
-        {
           href: 'https://github.com/SyedFarooqAlii',
           label: 'GitHub',
           position: 'right',
