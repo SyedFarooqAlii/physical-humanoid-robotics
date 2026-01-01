@@ -59,17 +59,22 @@ const ChatbotGlobal = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'sk-my-backend-key-123',
         },
         body: JSON.stringify({
-          session_id: 'chatbot-session',
+          query: inputValue,
           message: inputValue,
-          query_type: 'global',
+          session_id: 'chatbot-global-session-' + Date.now(),
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 422) {
+          throw new Error('Validation error: Required fields are missing. Please check your input.');
+        } else if (response.status === 500) {
+          throw new Error('Server error: The backend encountered an error. Please try again later.');
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const data = await response.json();

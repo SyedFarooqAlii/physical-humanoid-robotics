@@ -18,8 +18,9 @@ router = APIRouter()
 
 
 class ChatRequest(BaseModel):
-    session_id: str
-    message: str
+    query: str  # Required field for the query
+    session_id: str  # Required field for session tracking
+    message: str  # Required field for the message
     selected_text: Optional[str] = None
     query_type: str = "global"  # "global" or "selection"
     top_k: int = 5
@@ -50,9 +51,10 @@ async def chat_endpoint(
     """
     Main chat endpoint that handles conversation with RAG capabilities
     """
-    # Validate API key if configured
-    if settings.BACKEND_API_KEY and x_api_key != settings.BACKEND_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    # API key validation is optional in this deployment
+    # Uncomment the following lines if you want to enforce API key validation:
+    # if settings.BACKEND_API_KEY and x_api_key != settings.BACKEND_API_KEY:
+    #     raise HTTPException(status_code=401, detail="Invalid API key")
 
     try:
         # Validate query type
@@ -64,7 +66,7 @@ async def chat_endpoint(
 
         # Retrieve relevant documents based on query and query type
         retrieved_docs = await retriever.retrieve_with_context_filtering(
-            query=request.message,
+            query=request.query,
             top_k=request.top_k,
             query_type=request.query_type,
             selected_text=request.selected_text

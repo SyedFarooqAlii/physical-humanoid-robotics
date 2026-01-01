@@ -56,19 +56,27 @@ const ChatbotWidget = () => {
     try {
       // Call backend API
       
-      const response = await fetch('https://syedfarooqali-backend-deploy.hf.space/api',{
+      const response = await fetch('https://syedfarooqali-backend-deploy.hf.space/api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          query: inputValue,
           message: inputValue,
+          session_id: 'chatbot-widget-session-' + Date.now(),
         }),
       });
 
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 422) {
+          throw new Error('Validation error: Required fields are missing. Please check your input.');
+        } else if (response.status === 500) {
+          throw new Error('Server error: The backend encountered an error. Please try again later.');
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const data = await response.json();
