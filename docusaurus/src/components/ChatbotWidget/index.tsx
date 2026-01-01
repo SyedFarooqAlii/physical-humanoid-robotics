@@ -55,18 +55,17 @@ const ChatbotWidget = () => {
 
     try {
       // Call backend API
-      const response = await fetch('https://syedfarooqali-backend-deploy.hf.space/api', {
+      
+      const response = await fetch('https://syedfarooqali-backend-deploy.hf.space/api',{
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'sk-my-backend-key-123',
         },
         body: JSON.stringify({
-          session_id: 'chatbot-widget-session',
           message: inputValue,
-          query_type: 'global',
         }),
       });
+
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
