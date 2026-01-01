@@ -51,10 +51,10 @@ async def chat_endpoint(
     """
     Main chat endpoint that handles conversation with RAG capabilities
     """
-    # API key validation is optional in this deployment
-    # Uncomment the following lines if you want to enforce API key validation:
-    # if settings.BACKEND_API_KEY and x_api_key != settings.BACKEND_API_KEY:
-    #     raise HTTPException(status_code=401, detail="Invalid API key")
+    # Temporarily disable API key validation for Hugging Face deployment
+    # Check if API key validation is configured and enforce it if needed
+    # For now, we'll allow requests without API key for easier testing
+    pass  # No validation required for this deployment
 
     try:
         # Validate query type

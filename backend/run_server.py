@@ -3,7 +3,7 @@ Script to run the RAG Chatbot API server
 """
 import uvicorn
 import os
-from app.main import app
+from api import app
 
 
 def run_server():
@@ -14,12 +14,12 @@ def run_server():
     print("Serving Physical AI & Humanoid Robotics book content")
     print("Qdrant vector database connected")
     print("Neon PostgreSQL database connected")
-    print("Google Gemini API configured")
+    print("OpenRouter API configured")
     print("\nServer will be available at: http://localhost:8081")
     print("API documentation at: http://localhost:8081/docs")
 
     uvicorn.run(
-        "app.main:app",
+        "api:app",
         host="0.0.0.0",
         port=8081,
         reload=True,  # Set to False in production
