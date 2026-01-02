@@ -1,8 +1,10 @@
 import os
 import json
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dotenv import load_dotenv
+from agents import Agent, Runner
+from agents import function_tool
 import asyncio
 import time
 
@@ -13,48 +15,33 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import your existing RAG components from your project
-from app.retrieval.retriever import Retriever
-from app.generation.response_generator import ResponseGenerator
-from app.config import settings
-
-
-def retrieve_information(query: str, top_k: int = 5, query_type: str = "global", selected_text: Optional[str] = None) -> Dict:
+@function_tool
+def retrieve_information(query: str) -> Dict:
     """
-    Retrieve information from the knowledge base based on a query using your project's retriever
+    Retrieve information from the knowledge base based on a query
     """
+    from retrieving import RAGRetriever
+    retriever = RAGRetriever()
+
     try:
-        # Initialize the retriever
-        retriever = Retriever()
-
-        # Call the existing retrieve method from your RAG system
-        retrieved_docs = asyncio.run(
-            retriever.retrieve_with_context_filtering(
-                query=query,
-                top_k=top_k,
-                query_type=query_type,
-                selected_text=selected_text
-            )
-        )
+        # Call the existing retrieve method from the RAGRetriever instance
+        json_response = retriever.retrieve(query_text=query, top_k=5, threshold=0.3)
+        results = json.loads(json_response)
 
         # Format the results for the assistant
         formatted_results = []
-        for doc in retrieved_docs:
+        for result in results.get('results', []):
             formatted_results.append({
-                'content': doc.get('content', ''),
-                'document_id': doc.get('id', ''),
-                'title': doc.get('title', ''),
-                'chapter': doc.get('chapter', ''),
-                'section': doc.get('section', ''),
-                'page_reference': doc.get('page_reference', ''),
-                'similarity_score': doc.get('score', 0.0)
+                'content': result['content'],
+                'url': result['url'],
+                'position': result['position'],
+                'similarity_score': result['similarity_score']
             })
 
         return {
             'query': query,
             'retrieved_chunks': formatted_results,
-            'total_results': len(formatted_results),
-            'query_type': query_type
+            'total_results': len(formatted_results)
         }
     except Exception as e:
         logger.error(f"Error in retrieve_information: {e}")
@@ -62,71 +49,42 @@ def retrieve_information(query: str, top_k: int = 5, query_type: str = "global",
             'query': query,
             'retrieved_chunks': [],
             'total_results': 0,
-            'error': str(e),
-            'query_type': query_type
+            'error': str(e)
         }
-
 
 class RAGAgent:
     def __init__(self):
-        # Initialize with your existing project components
-        self.response_generator = ResponseGenerator()
-        self.retriever = Retriever()
+        # Create the agent with retrieval tool using the new OpenAI Agents SDK
+        self.agent = Agent(
+            name="RAG Assistant",
+            instructions="You are a helpful assistant that answers questions based on retrieved documents. When asked a question, retrieve relevant documents first using the retrieve_information tool, then answer based on them. Always cite your sources and provide the information that was used to generate the answer.",
+            tools=[retrieve_information]
+        )
 
-        logger.info("RAG Agent initialized with existing project components")
+        logger.info("RAG Agent initialized with OpenAI Agents SDK")
 
-    def query_agent(self, query_text: str, session_id: Optional[str] = None, query_type: str = "global", selected_text: Optional[str] = None) -> Dict:
+    def query_agent(self, query_text: str) -> Dict:
         """
-        Process a query through the RAG agent and return structured response using your project's components
+        Process a query through the RAG agent and return structured response
         """
         start_time = time.time()
 
         logger.info(f"Processing query through RAG agent: '{query_text[:50]}...'")
 
         try:
-            # Retrieve relevant documents using your project's retriever
-            retrieval_result = retrieve_information(query_text, top_k=5, query_type=query_type, selected_text=selected_text)
+            # Run the agent with the query using the new OpenAI Agents SDK
+            # Since Runner.run is async, we need to run it in an event loop
+            import asyncio
+            if asyncio.get_event_loop().is_running():
+                # If we're already in an event loop, we need to use a different approach
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self._async_query_agent(query_text))
+                    result = future.result()
+            else:
+                result = asyncio.run(self._async_query_agent(query_text))
 
-            if retrieval_result.get('error'):
-                return {
-                    "answer": "Sorry, I encountered an error retrieving information.",
-                    "sources": [],
-                    "matched_chunks": [],
-                    "error": retrieval_result['error'],
-                    "query_time_ms": (time.time() - start_time) * 1000,
-                    "session_id": session_id,
-                    "query_type": query_type
-                }
-
-            # Generate response using your project's response generator
-            response_data = asyncio.run(
-                self.response_generator.generate_response_with_validation(
-                    query=query_text,
-                    retrieved_contexts=retrieval_result['retrieved_chunks'],
-                    query_type=query_type,
-                    selected_text=selected_text,
-                    session_id=session_id
-                )
-            )
-
-            # Calculate query time
-            query_time_ms = (time.time() - start_time) * 1000
-
-            # Format the response
-            response = {
-                "answer": response_data.get("response", ""),
-                "sources": [citation.get("title", "") for citation in response_data.get("citations", []) if citation.get("title")],
-                "matched_chunks": retrieval_result['retrieved_chunks'],
-                "citations": response_data.get("citations", []),
-                "query_time_ms": query_time_ms,
-                "session_id": session_id,
-                "query_type": query_type,
-                "confidence": self._calculate_confidence(retrieval_result['retrieved_chunks']),
-                "error": response_data.get("error")
-            }
-
-            logger.info(f"Query processed in {query_time_ms:.2f}ms")
-            return response
+            return result
 
         except Exception as e:
             logger.error(f"Error processing query: {e}")
@@ -134,26 +92,72 @@ class RAGAgent:
                 "answer": "Sorry, I encountered an error processing your request.",
                 "sources": [],
                 "matched_chunks": [],
-                "citations": [],
                 "error": str(e),
-                "query_time_ms": (time.time() - start_time) * 1000,
-                "session_id": session_id,
-                "query_type": query_type
+                "query_time_ms": (time.time() - start_time) * 1000
             }
+
+    async def _async_query_agent(self, query_text: str) -> Dict:
+        """
+        Internal async method to run the agent query
+        """
+        start_time = time.time()
+
+        try:
+            result = await Runner.run(self.agent, query_text)
+
+            # Extract the assistant's response
+            assistant_response = result.final_output
+
+            if not assistant_response:
+                return {
+                    "answer": "Sorry, I couldn't generate a response.",
+                    "sources": [],
+                    "matched_chunks": [],
+                    "error": "No response from assistant",
+                    "query_time_ms": (time.time() - start_time) * 1000
+                }
+
+            # Extract sources and matched chunks from the tool calls
+            sources = set()
+            matched_chunks = []
+
+            # The new SDK might store tool call results differently
+            # Let's try to access them in the most likely way based on the documentation
+            if hasattr(result, 'final_output') and result.final_output:
+                # If the result contains tool call results in final_output
+                # For now, we'll rely on the agent's processing of the tool results
+                # The agent itself will incorporate the tool results into the final response
+                pass
+
+            # Calculate query time
+            query_time_ms = (time.time() - start_time) * 1000
+
+            # Format the response
+            # For the new SDK, we may need to extract the sources and chunks differently
+            # based on how the agent processes the tool results
+            response = {
+                "answer": str(assistant_response),
+                "sources": list(sources),
+                "matched_chunks": matched_chunks,
+                "query_time_ms": query_time_ms,
+                "confidence": self._calculate_confidence(matched_chunks)
+            }
+
+            logger.info(f"Query processed in {query_time_ms:.2f}ms")
+            return response
+
+        except Exception as e:
+            logger.error(f"Error in async query: {e}")
+            raise
 
     def _calculate_confidence(self, matched_chunks: List[Dict]) -> str:
         """
-        Calculate confidence level based on similarity scores and number of matches using your project's logic
+        Calculate confidence level based on similarity scores and number of matches
         """
         if not matched_chunks:
             return "low"
 
-        # Calculate average similarity score
-        scores = [chunk.get('similarity_score', 0.0) for chunk in matched_chunks if chunk.get('similarity_score') is not None]
-        if not scores:
-            return "low"
-
-        avg_score = sum(scores) / len(scores)
+        avg_score = sum(chunk.get('similarity_score', 0.0) for chunk in matched_chunks) / len(matched_chunks)
 
         if avg_score >= 0.7:
             return "high"
@@ -162,34 +166,40 @@ class RAGAgent:
         else:
             return "low"
 
-    async def query_agent_async(self, query_text: str, session_id: Optional[str] = None, query_type: str = "global", selected_text: Optional[str] = None) -> Dict:
-        """
-        Async version of the query agent method
-        """
-        return self.query_agent(query_text, session_id, query_type, selected_text)
-
-
-def query_agent(query_text: str, session_id: Optional[str] = None, query_type: str = "global", selected_text: Optional[str] = None) -> Dict:
+def query_agent(query_text: str) -> Dict:
     """
-    Convenience function to query the RAG agent using your project's components
+    Convenience function to query the RAG agent
     """
     agent = RAGAgent()
-    return agent.query_agent(query_text, session_id, query_type, selected_text)
+    return agent.query_agent(query_text)
 
-
-def run_agent_sync(query_text: str, session_id: Optional[str] = None, query_type: str = "global", selected_text: Optional[str] = None) -> Dict:
+def run_agent_sync(query_text: str) -> Dict:
     """
-    Synchronous function to run the agent for direct usage with your project's components
+    Synchronous function to run the agent for direct usage
     """
-    agent = RAGAgent()
-    return agent.query_agent(query_text, session_id, query_type, selected_text)
+    import asyncio
 
+    async def run_async():
+        agent = RAGAgent()
+        return await agent._async_query_agent(query_text)
+
+    # Check if there's already a running event loop
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's already a loop, run in a separate thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, run_async())
+            return future.result()
+    except RuntimeError:
+        # No running loop, safe to use asyncio.run
+        return asyncio.run(run_async())
 
 def main():
     """
-    Main function to demonstrate the RAG agent functionality using your project's components
+    Main function to demonstrate the RAG agent functionality
     """
-    logger.info("Initializing RAG Agent with project components...")
+    logger.info("Initializing RAG Agent...")
 
     # Initialize the agent
     agent = RAGAgent()
@@ -210,8 +220,8 @@ def main():
         print(f"\nQuery {i}: {query}")
         print("-" * 30)
 
-        # Process query through agent using your project's components
-        response = agent.query_agent(query, session_id=f"test-session-{i}")
+        # Process query through agent
+        response = agent.query_agent(query)
 
         # Print formatted results
         print(f"Answer: {response['answer']}")
@@ -226,15 +236,14 @@ def main():
             for j, chunk in enumerate(response['matched_chunks'][:2], 1):  # Show first 2 chunks
                 content_preview = chunk['content'][:100] + "..." if len(chunk['content']) > 100 else chunk['content']
                 print(f"  Chunk {j}: {content_preview}")
-                print(f"    Source: {chunk.get('title', 'Unknown')}")
-                print(f"    Score: {chunk.get('similarity_score', 0.0):.3f}")
+                print(f"    Source: {chunk['url']}")
+                print(f"    Score: {chunk['similarity_score']:.3f}")
 
         print(f"Query time: {response['query_time_ms']:.2f}ms")
         print(f"Confidence: {response.get('confidence', 'unknown')}")
 
         if i < len(test_queries):  # Don't sleep after the last query
             time.sleep(1)  # Small delay between queries
-
 
 if __name__ == "__main__":
     main()

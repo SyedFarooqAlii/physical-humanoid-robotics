@@ -1,3 +1,0 @@
-"""
-RAG Chatbot Backend Application
-"""

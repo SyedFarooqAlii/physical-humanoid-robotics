@@ -1,6 +1,6 @@
 import os
 import asyncio
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
@@ -14,14 +14,13 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import the RAG agent functionality from your project
+# Import the existing RAG agent functionality
 from agent import RAGAgent
-from app.config import settings
 
 # Create FastAPI app
 app = FastAPI(
-    title="Physical AI & Humanoid Robotics RAG API",
-    description="API for RAG-based question answering for Physical AI & Humanoid Robotics book",
+    title="RAG Agent API",
+    description="API for RAG Agent with document retrieval and question answering",
     version="1.0.0"
 )
 
@@ -37,6 +36,9 @@ app.add_middleware(
 # Pydantic models
 class QueryRequest(BaseModel):
     query: str
+
+class ChatRequest(BaseModel):
+    query: str
     message: str
     session_id: str
     selected_text: Optional[str] = None
@@ -45,26 +47,25 @@ class QueryRequest(BaseModel):
 
 class MatchedChunk(BaseModel):
     content: str
-    url: Optional[str] = None
-    position: Optional[int] = None
-    similarity_score: Optional[float] = None
-    document_id: Optional[str] = None
-    title: Optional[str] = None
-    chapter: Optional[str] = None
-    section: Optional[str] = None
+    url: str
+    position: int
+    similarity_score: float
 
 class QueryResponse(BaseModel):
+    answer: str
+    sources: List[str]
+    matched_chunks: List[MatchedChunk]
+    error: Optional[str] = None
+    status: str  # "success", "error", "empty"
+    query_time_ms: Optional[float] = None
+    confidence: Optional[str] = None
+
+class ChatResponse(BaseModel):
     response: str
     citations: List[Dict[str, str]]
     session_id: str
     query_type: str
     timestamp: str
-    sources: List[str] = []
-    matched_chunks: List[MatchedChunk] = []
-    error: Optional[str] = None
-    status: str  # "success", "error", "empty"
-    query_time_ms: Optional[float] = None
-    confidence: Optional[str] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -75,25 +76,74 @@ rag_agent = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the RAG system on startup"""
+    """Initialize the RAG agent on startup"""
     global rag_agent
-    logger.info("Initializing RAG System...")
+    logger.info("Initializing RAG Agent...")
     try:
         rag_agent = RAGAgent()
-        logger.info("RAG System initialized successfully")
+        logger.info("RAG Agent initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize RAG System: {e}")
+        logger.error(f"Failed to initialize RAG Agent: {e}")
         raise
 
-@app.post("/api", response_model=QueryResponse)
-async def chat_endpoint(
-    request: QueryRequest,
-    x_api_key: str = Header(None)
-):
+@app.post("/ask", response_model=QueryResponse)
+async def ask_rag(request: QueryRequest):
+    """
+    Process a user query through the RAG agent and return the response
+    """
+    logger.info(f"Processing query: {request.query[:50]}...")
+
+    try:
+        # Validate input
+        if not request.query or len(request.query.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+        if len(request.query) > 2000:
+            raise HTTPException(status_code=400, detail="Query too long, maximum 2000 characters")
+
+        # Process query through RAG agent
+        response = rag_agent.query_agent(request.query)
+
+        # Format response
+        formatted_response = QueryResponse(
+            answer=response.get("answer", ""),
+            sources=response.get("sources", []),
+            matched_chunks=[
+                MatchedChunk(
+                    content=chunk.get("content", ""),
+                    url=chunk.get("url", ""),
+                    position=chunk.get("position", 0),
+                    similarity_score=chunk.get("similarity_score", 0.0)
+                )
+                for chunk in response.get("matched_chunks", [])
+            ],
+            error=response.get("error"),
+            status="error" if response.get("error") else "success",
+            query_time_ms=response.get("query_time_ms"),
+            confidence=response.get("confidence")
+        )
+
+        logger.info(f"Query processed successfully in {response.get('query_time_ms', 0):.2f}ms")
+        return formatted_response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing query: {e}")
+        return QueryResponse(
+            answer="",
+            sources=[],
+            matched_chunks=[],
+            error=str(e),
+            status="error"
+        )
+
+@app.post("/api", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
     """
     Main chat endpoint that handles conversation with RAG capabilities
     """
-    logger.info(f"Processing query: {request.query[:50]}...")
+    logger.info(f"Processing chat query: {request.query[:50]}...")
 
     try:
         # Validate input
@@ -106,73 +156,47 @@ async def chat_endpoint(
         if len(request.query) > 2000:
             raise HTTPException(status_code=400, detail="Query too long, maximum 2000 characters")
 
-        # Optional API key validation using your project's existing settings
-        if settings.BACKEND_API_KEY and x_api_key != settings.BACKEND_API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+        # Process query through RAG agent
+        response = rag_agent.query_agent(request.query)
 
-        # Validate query type
-        if request.query_type not in ["global", "selection"]:
-            raise HTTPException(
-                status_code=400,
-                detail="query_type must be either 'global' or 'selection'"
-            )
-
-        # Process query through the global RAG agent
-        response_data = rag_agent.query_agent(
-            query_text=request.query,
-            session_id=request.session_id,
-            query_type=request.query_type,
-            selected_text=request.selected_text
-        )
-
-        # Format response
+        # Format response to match expected structure
         from datetime import datetime
         timestamp = datetime.utcnow().isoformat()
 
-        formatted_response = QueryResponse(
-            response=response_data.get("answer", ""),
-            citations=response_data.get("citations", []),
+        # Convert matched chunks to citations format
+        citations = []
+        for chunk in response.get("matched_chunks", []):
+            citation = {
+                "document_id": "",
+                "title": chunk.get("url", ""),
+                "chapter": "",
+                "section": "",
+                "page_reference": ""
+            }
+            citations.append(citation)
+
+        formatted_response = ChatResponse(
+            response=response.get("answer", ""),
+            citations=citations,
             session_id=request.session_id,
             query_type=request.query_type,
-            timestamp=timestamp,
-            sources=response_data.get("sources", []),
-            matched_chunks=[
-                MatchedChunk(
-                    content=chunk.get('content', ''),
-                    document_id=chunk.get('document_id', ''),
-                    title=chunk.get('title', ''),
-                    chapter=chunk.get('chapter', ''),
-                    section=chunk.get('section', ''),
-                    similarity_score=chunk.get('similarity_score', 0.0)
-                )
-                for chunk in response_data.get("matched_chunks", [])
-            ],
-            error=response_data.get("error"),
-            status="error" if response_data.get("error") else "success",
-            query_time_ms=response_data.get("query_time_ms"),
-            confidence=response_data.get("confidence")
+            timestamp=timestamp
         )
 
-        logger.info(f"Query processed successfully for session: {request.session_id}")
+        logger.info(f"Chat query processed successfully")
         return formatted_response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing query: {e}")
+        logger.error(f"Error processing chat query: {e}")
         from datetime import datetime
-        return QueryResponse(
+        return ChatResponse(
             response="",
             citations=[],
             session_id=request.session_id,
-            query_type="global",
-            timestamp=datetime.utcnow().isoformat(),
-            sources=[],
-            matched_chunks=[],
-            error=str(e),
-            status="error",
-            query_time_ms=None,
-            confidence=None
+            query_type=request.query_type,
+            timestamp=datetime.utcnow().isoformat()
         )
 
 @app.get("/health", response_model=HealthResponse)
@@ -182,10 +206,10 @@ async def health_check():
     """
     return HealthResponse(
         status="healthy",
-        message="Physical AI & Humanoid Robotics RAG API is running"
+        message="RAG Agent API is running"
     )
 
 # For running with uvicorn
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8081)))
+    uvicorn.run(app, host="0.0.0.0", port=8000)

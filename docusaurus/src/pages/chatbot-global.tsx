@@ -55,7 +55,7 @@ const ChatbotGlobal = () => {
 
     try {
       // Call backend API
-      const response = await fetch('https://syedfarooqali-backend-deploy.hf.space/api', {
+      const response = await fetch('https://syedfarooqali-chat-bot.hf.space/api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
